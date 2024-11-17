@@ -49,7 +49,9 @@ func ArchiveInformation(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write(img)
+		return
 	}
 
 	// Create temp file to save zip file
