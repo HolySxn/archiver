@@ -25,7 +25,7 @@ func main() {
 	// Routes
 	router.HandleFunc("/api/archive/information", handlers.ArchiveInformation).Methods("POST")
 	router.HandleFunc("/api/archive/files", handlers.FormArchive).Methods("POST")
-	router.HandleFunc("/api/mail/file", nil).Methods("POST")
+	router.HandleFunc("/api/mail/file", handlers.SendEmail).Methods("POST")
 
 	slog.Info("Starting server", "port", port)
 	err := http.ListenAndServe(port, router)
