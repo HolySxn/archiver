@@ -7,9 +7,12 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	godotenv.Load()
+	port := ":8080"
 	// Define new logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -21,10 +24,11 @@ func main() {
 
 	// Routes
 	router.HandleFunc("/api/archive/information", handlers.ArchiveInformation).Methods("POST")
-	router.HandleFunc("/api/archive/files", handlers.FormArchive).Methods("Post")
+	router.HandleFunc("/api/archive/files", handlers.FormArchive).Methods("POST")
+	router.HandleFunc("/api/mail/file", nil).Methods("POST")
 
-	slog.Info("Starting server", "port", "8080")
-	err := http.ListenAndServe(":8080", router)
+	slog.Info("Starting server", "port", port)
+	err := http.ListenAndServe(port, router)
 	if err != nil {
 		slog.Error("Failed to start server", "error", err.Error())
 	}

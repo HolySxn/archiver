@@ -58,7 +58,6 @@ func ArchiveInformation(w http.ResponseWriter, r *http.Request) {
 	// Create temp file to save zip file
 	tempFile, err := os.CreateTemp("", fileHeader.Filename)
 	if err != nil {
-		fmt.Println(err)
 		http.Error(w, "Failed to create tempFile", http.StatusInternalServerError)
 		return
 	}
