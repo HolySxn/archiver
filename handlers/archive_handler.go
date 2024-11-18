@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 )
 
@@ -28,6 +29,7 @@ func sendError(w http.ResponseWriter, message string, status int) {
 	slog.Error(message)
 }
 
+// Process zip file and return list of files, total size and error
 func processZipFile(w http.ResponseWriter, r *http.Request) ([]models.File, float64, error) {
 	// Parse multipart form
 	err := r.ParseMultipartForm(0)
@@ -46,16 +48,16 @@ func processZipFile(w http.ResponseWriter, r *http.Request) ([]models.File, floa
 
 	// Check file type
 	if filepath.Ext(fileHeader.Filename) != ".zip" {
-		f, err := os.Open("./data/notZip.jpg")
+		f, err := os.Open("./data/notZip_500x500.jpg")
 		if err != nil {
-			http.Error(w, "Not appropriate file type", http.StatusInternalServerError)
+			sendError(w, "Not appropriate file type", http.StatusBadRequest)
 			return nil, 0, err
 		}
 		defer f.Close()
 
 		img, err := io.ReadAll(f)
 		if err != nil {
-			http.Error(w, "Not appropriate file type", http.StatusInternalServerError)
+			sendError(w, "Not appropriate file type", http.StatusBadRequest)
 			return nil, 0, err
 		}
 
@@ -67,21 +69,21 @@ func processZipFile(w http.ResponseWriter, r *http.Request) ([]models.File, floa
 	// Create temp file to save zip file
 	tempFile, err := os.CreateTemp("", fileHeader.Filename)
 	if err != nil {
-		http.Error(w, "Failed to create tempFile", http.StatusInternalServerError)
+		sendError(w, "Failed to create tempFile", http.StatusBadRequest)
 		return nil, 0, err
 	}
 	defer os.Remove(tempFile.Name())
 
 	_, err = tempFile.ReadFrom(file)
 	if err != nil {
-		http.Error(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
+		sendError(w, "Failed to read file: "+err.Error(), http.StatusInternalServerError)
 		return nil, 0, err
 	}
 	tempFile.Close()
 
 	archive, err := zip.OpenReader(tempFile.Name())
 	if err != nil {
-		http.Error(w, fmt.Sprintf("This is not a valid archive! (%s)", err.Error()), http.StatusBadRequest)
+		sendError(w, fmt.Sprintf("This is not a valid archive! (%s)", err.Error()), http.StatusBadRequest)
 		return nil, 0, err
 	}
 	defer archive.Close()
@@ -89,10 +91,7 @@ func processZipFile(w http.ResponseWriter, r *http.Request) ([]models.File, floa
 	var files []models.File
 	var totalSize float64
 	for _, f := range archive.File {
-		mimeType := mime.TypeByExtension(filepath.Ext(f.Name))
-		if mimeType == "" {
-			continue
-		}
+		mimeType := GetMimeType(f.Name)
 		fileSize := float64(f.UncompressedSize64)
 		totalSize += fileSize
 		files = append(files, models.File{
@@ -106,15 +105,14 @@ func processZipFile(w http.ResponseWriter, r *http.Request) ([]models.File, floa
 }
 
 func ArchiveInformation(w http.ResponseWriter, r *http.Request) {
-
 	files, totalSize, err := processZipFile(w, r)
 	if err != nil {
-		se
+		return
 	}
 
 	response := models.Archive{
-		FileName:    fileHeader.Filename,
-		ArchiveSize: float64(fileHeader.Size),
+		FileName:    r.FormValue("file"),
+		ArchiveSize: float64(r.ContentLength),
 		TotalSize:   totalSize,
 		TotalFiles:  len(files),
 		Files:       files,
@@ -124,23 +122,24 @@ func ArchiveInformation(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// FormArchive handles file uploads, compresses them into a zip file, and sends back the archive
 func FormArchive(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(0)
 	if err != nil {
-		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+		sendError(w, "Failed to parse multipart form", http.StatusBadRequest)
 		return
 	}
 
-	files := r.MultipartForm.File["files"]
+	files := r.MultipartForm.File["files[]"]
 	if len(files) == 0 {
-		http.Error(w, "No files uploaded", http.StatusBadRequest)
+		sendError(w, "No files uploaded", http.StatusBadRequest)
 		return
 	}
 
 	// Create temp zip to save files
 	tempFile, err := os.CreateTemp("", "archive-*.zip")
 	if err != nil {
-		http.Error(w, "Failed to create temp file", http.StatusInternalServerError)
+		sendError(w, "Failed to create temp file", http.StatusInternalServerError)
 		return
 	}
 	defer func() {
@@ -153,47 +152,33 @@ func FormArchive(w http.ResponseWriter, r *http.Request) {
 	for _, fileHeader := range files {
 		file, err := fileHeader.Open()
 		if err != nil {
-			http.Error(w, "Error opening file", http.StatusInternalServerError)
+			sendError(w, "Error opening file", http.StatusInternalServerError)
 			return
 		}
 
-		buffer := make([]byte, 512)
-		_, err = file.Read(buffer)
-		if err != nil && err != io.EOF {
-			file.Close()
-			http.Error(w, "Error reading file header", http.StatusInternalServerError)
-			return
-		}
-
-		mimeType, err := GetMimeType(file)
-		if err != nil {
-			file.Close()
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		file.Seek(0, 0)
+		mimeType := GetMimeType(fileHeader.Filename)
 
 		if mimeType != OPEN_XML && mimeType != XML && mimeType != JPEG && mimeType != PNG {
 			file.Close()
-			http.Error(w, fmt.Sprintf("Unsupported file type: %s", fileHeader.Filename), http.StatusBadRequest)
+			sendError(w, fmt.Sprintf("Unsupported file type: %s, type:%s", fileHeader.Filename, mimeType), http.StatusBadRequest)
 			return
 		}
 
 		fileWriter, err := zipWriter.Create(fileHeader.Filename)
 		if err != nil {
 			file.Close()
-			http.Error(w, "Error creating file writer", http.StatusInternalServerError)
+			sendError(w, "Error creating file writer", http.StatusInternalServerError)
 			return
 		}
 
-		buffer = make([]byte, 1024*1024) // 1 MB buffer size
+		buffer := make([]byte, 1024*1024) // 1 MB buffer size
 		for {
 			n, err := file.Read(buffer)
 			if n > 0 {
 				_, writeErr := fileWriter.Write(buffer[:n])
 				if writeErr != nil {
 					file.Close()
-					http.Error(w, "Error writing file to ZIP", http.StatusInternalServerError)
+					sendError(w, "Error writing file to ZIP", http.StatusInternalServerError)
 					return
 				}
 			}
@@ -202,7 +187,7 @@ func FormArchive(w http.ResponseWriter, r *http.Request) {
 			}
 			if err != nil {
 				file.Close()
-				http.Error(w, "Error reading file", http.StatusInternalServerError)
+				sendError(w, "Error reading file", http.StatusInternalServerError)
 				return
 			}
 		}
@@ -210,10 +195,10 @@ func FormArchive(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Added file to ZIP: %s\n", fileHeader.Filename)
 	}
 
-	// if err := zipWriter.Close(); err != nil {
-	// 	http.Error(w, "Error finalizing ZIP archive", http.StatusInternalServerError)
-	// 	return
-	// }
+	if err := zipWriter.Close(); err != nil {
+		sendError(w, "Error finalizing ZIP archive", http.StatusInternalServerError)
+		return
+	}
 
 	tempFile.Seek(0, 0)
 	stat, _ := tempFile.Stat()
@@ -225,18 +210,12 @@ func FormArchive(w http.ResponseWriter, r *http.Request) {
 
 	_, err = io.Copy(w, tempFile)
 	if err != nil {
-		http.Error(w, "Error sending archive", http.StatusInternalServerError)
+		sendError(w, "Error sending archive", http.StatusInternalServerError)
 	}
 }
 
 // Function to get MIME type of the file
-func GetMimeType(file io.Reader) (string, error) {
-	buf := make([]byte, 512)
-	_, err := file.Read(buf)
-	if err != nil && err != io.EOF {
-		return "", fmt.Errorf("failed to read file: %v", err)
-	}
-
-	mimeType := http.DetectContentType(buf)
-	return mimeType, nil
+func GetMimeType(filename string) string {
+	mimeType := mime.TypeByExtension(path.Ext(filename))
+	return mimeType
 }
