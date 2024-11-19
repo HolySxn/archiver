@@ -115,8 +115,8 @@ Example response:
 ## Installation & Setup
 1. Clone the repository:
     ```bash
-    git clone <repository_url>
-    cd doodocs-backend-challenge
+    git clone https://github.com/HolySxn/archiver.git
+    cd archiver
     ```
 
 2. Set environment variables:
