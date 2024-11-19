@@ -19,7 +19,7 @@ func SendError(w http.ResponseWriter, message string, status int) {
 	var img []byte
 	var err error
 	switch status {
-	case http.NotAppropriateFile:
+	case 460:
 		img, err = openFile(NotZip)
 		status = http.StatusBadRequest
 	case http.StatusBadRequest:

@@ -43,7 +43,7 @@ func processZipFile(w http.ResponseWriter, r *http.Request) ([]models.File, floa
 
 	// Check file type
 	if filepath.Ext(fileHeader.Filename) != ".zip" {
-		utils.SendError(w, "Unsupported file type", http.NotAppropriateFile)
+		utils.SendError(w, "Unsupported file type", 460)
 		return nil, 0, "", errors.New("unsupported file type")
 	}
 
