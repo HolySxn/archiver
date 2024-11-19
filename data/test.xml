@@ -1,35 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Company>
-    <Employees>
-        <Employee id="101">
-            <Name>John Doe</Name>
-            <Position>Software Engineer</Position>
-            <Salary currency="USD">75000</Salary>
-        </Employee>
-        <Employee id="102">
-            <Name>Jane Smith</Name>
-            <Position>Data Scientist</Position>
-            <Salary currency="USD">85000</Salary>
-        </Employee>
-    </Employees>
-    <Departments>
-        <Department id="D1">
-            <Name>Engineering</Name>
-            <Head>Emily Brown</Head>
-        </Department>
-        <Department id="D2">
-            <Name>Marketing</Name>
-            <Head>Robert Green</Head>
-        </Department>
-    </Departments>
-    <Projects>
-        <Project id="P1">
-            <Title>AI Development</Title>
-            <Budget currency="USD">500000</Budget>
-            <Team>
-                <Member>John Doe</Member>
-                <Member>Jane Smith</Member>
-            </Team>
-        </Project>
-    </Projects>
-</Company>
+<Application>
+    <Company>
+        <Employees>
+            <Employee id="101">
+                <Name>John Doe</Name>
+                <Position>Software Engineer</Position>
+                <Salary currency="USD">75000</Salary>
+            </Employee>
+            <Employee id="102">
+                <Name>Jane Smith</Name>
+                <Position>Data Scientist</Position>
+                <Salary currency="USD">85000</Salary>
+            </Employee>
+        </Employees>
+        <Departments>
+            <Department id="D1">
+                <Name>Engineering</Name>
+                <Head>Emily Brown</Head>
+            </Department>
+            <Department id="D2">
+                <Name>Marketing</Name>
+                <Head>Robert Green</Head>
+            </Department>
+        </Departments>
+        <Projects>
+            <Project id="P1">
+                <Title>AI Development</Title>
+                <Budget currency="USD">500000</Budget>
+                <Team>
+                    <Member>John Doe</Member>
+                    <Member>Jane Smith</Member>
+                </Team>
+            </Project>
+        </Projects>
+    </Company>
+</Application>

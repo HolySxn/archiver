@@ -1,13 +1,13 @@
 package handlers
 
 import (
+	"archiver/internal/utils"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -29,47 +29,49 @@ func sendEmail(to string, attachment string) error {
 func SendEmail(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(0) // 30 mb
 	if err != nil {
-		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+		utils.SendError(w, "Failed to parse multipart form", http.StatusBadRequest)
 		return
 	}
 	file, fileHeader, err := r.FormFile("file")
 	if err != nil {
-		http.Error(w, "Failed to retrieve file", http.StatusInternalServerError)
+		utils.SendError(w, "Failed to retrieve file", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
+
+	mimeType := GetMimeType(fileHeader.Filename)
+	if mimeType != OPEN_XML && mimeType != PDF {
+		utils.SendError(w, "Not appropriate file type", http.StatusBadRequest)
+		return
+	}
 
 	emails := r.FormValue("emails")
 
 	emailsList := strings.Split(emails, ",")
 	for i, email := range emailsList {
 		email = strings.TrimSpace(email)
-		if !isValidEmail(email) {
-			http.Error(w, fmt.Sprintf("Invalid email address: %s", email), http.StatusBadRequest)
+		if !utils.IsValidEmail(email) {
+			utils.SendError(w, fmt.Sprintf("Invalid email address: %s", email), http.StatusBadRequest)
 			return
 		}
 		emailsList[i] = email
 	}
 
-	// if len(file) != 1 {
-	// 	http.Error(w, "Attach only one file", http.StatusBadRequest)
-	// 	return
-	// }
 	if len(emails) == 0 {
-		http.Error(w, "No emails are sent", http.StatusBadRequest)
+		utils.SendError(w, "No emails are sent", http.StatusBadRequest)
 		return
 	}
 
 	temp, err := os.CreateTemp("", "file-*"+filepath.Ext(fileHeader.Filename))
 	if err != nil {
-		http.Error(w, "Failed to create temp file", http.StatusInternalServerError)
+		utils.SendError(w, "Failed to create temp file", http.StatusInternalServerError)
 		return
 	}
 	defer os.Remove(temp.Name())
 
 	_, err = io.Copy(temp, file)
 	if err != nil {
-		http.Error(w, "Failed to copy file", http.StatusInternalServerError)
+		utils.SendError(w, "Failed to copy file", http.StatusInternalServerError)
 		return
 	}
 	temp.Close()
@@ -98,19 +100,10 @@ func SendEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(failedEmails) > 0 {
-		http.Error(w, fmt.Sprintf("Some emails failed: %v", failedEmails), http.StatusInternalServerError)
+		utils.SendError(w, fmt.Sprintf("Some emails failed: %v", failedEmails), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(200)
 	w.Write([]byte("file has been sent"))
 }
-
-func isValidEmail(email string) bool {
-	re := regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9_\-\.])*[a-zA-Z0-9]?)@([a-zA-Z0-9_\-\.]+).([a-zA-Z_\.\-]{2,5})$`)
-	return re.MatchString(email)
-}
-
-// func isValidFile(file string) bool{
-
-// }
