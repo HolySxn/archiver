@@ -50,9 +50,6 @@ Example response:
 }
 ```
 
-#### Error Handling
-- If the provided file is not a valid archive (ZIP), return an appropriate error message.
-
 ### 2. Create Archive
 #### Endpoint
 `POST /api/archive/files`
@@ -83,9 +80,6 @@ Example response:
 {Binary data of ZIP file}
 ```
 
-#### Error Handling
-- If any file in the `files[]` list is not one of the allowed MIME types, return an appropriate error message.
-
 ### 3. Send File to Multiple Recipients
 #### Endpoint
 `POST /api/mail/file`
@@ -112,8 +106,6 @@ Example response:
 200 OK
 ```
 
-#### Error Handling
-- If any file in the `file` section is not one of the allowed MIME types, return an appropriate error message.
 
 ## Environment Variables
 - `FROM_EMAIL`: Sender’s email address.
