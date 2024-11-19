@@ -13,9 +13,9 @@ import (
 func main() {
 	godotenv.Load()
 
-	port := ":" + os.Getenv("PORT")
-	if port == ":" {
-		port = ":8080" // default port
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "4000" // default port
 	}
 	// Define new logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
@@ -32,7 +32,7 @@ func main() {
 	router.HandleFunc("/api/mail/file", handlers.SendEmail).Methods("POST")
 
 	slog.Info("Starting server", "port", port)
-	err := http.ListenAndServe(port, router)
+	err := http.ListenAndServe(":"+port, router)
 	if err != nil {
 		slog.Error("Failed to start server", "error", err.Error())
 	}
