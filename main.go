@@ -15,7 +15,7 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "4000" // default port
+		port = "10000" // default port
 	}
 	// Define new logger
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
