@@ -13,8 +13,8 @@ import (
 func main() {
 	godotenv.Load()
 
-	port := os.Getenv("PORT")
-	if port == "" {
+	port := ":" + os.Getenv("PORT")
+	if port == ":" {
 		port = ":8080" // default port
 	}
 	// Define new logger
